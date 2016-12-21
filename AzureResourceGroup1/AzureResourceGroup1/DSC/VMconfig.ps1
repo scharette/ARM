@@ -4,7 +4,9 @@ Configuration Main
 Param ( [string] $nodeName )
 
 Import-DscResource -ModuleName PSDesiredStateConfiguration
+Import-DscResource -ModuleName xWebAdministration
 
+    
 Node $nodeName
   {
    
@@ -97,5 +99,50 @@ Node $nodeName
         State = "Running"
         DependsOn = "[Package]InstallWebDeploy"
     }
-  }
+	
+	xWebAppPool SiteTestPool
+
+    {
+	    Ensure = "Present"
+		Name   = 'SiteTestpool'
+		State  = 'Started'
+		autoStart = $true
+	}
+
+    xWebsite SiteTest
+	{
+
+            Ensure          = "Present"
+			Name            = 'SiteTest'
+			State           = 'Started'
+			PhysicalPath    = 'C:\Web\SiteTest\wwwroot'
+			ServiceAutoStartEnabled = $true
+			ApplicationPool = 'SiteTestpool'
+			BindingInfo     = @(
+				              @(MSFT_xWebBindingInformation   
+
+								{  
+									Protocol              = "HTTP"
+									Port                  =  81
+									HostName              = "*"
+								}
+							)
+						)
+
+      AuthenticationInfo =  MSFT_xWebAuthenticationInformation  
+
+        {
+
+            Anonymous = $true
+			Basic = $false
+			Windows = $false
+			Digest = $false
+		}
+		
+            DependsOn       = '[xWebAppPool]SiteTestpool'
+
+        }        
+
+
+	}
 }
