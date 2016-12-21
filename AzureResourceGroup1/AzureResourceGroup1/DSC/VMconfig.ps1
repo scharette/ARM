@@ -100,30 +100,77 @@ Node $nodeName
         DependsOn = "[Package]InstallWebDeploy"
     }
 	
-	xWebAppPool SiteTestPool
+	xWebAppPool CatSitePool
 
     {
 	    Ensure = "Present"
-		Name   = 'SiteTestpool'
+		Name   = 'CatSitePool'
 		State  = 'Started'
 		autoStart = $true
 	}
 
-    xWebsite SiteTest
+    File DirectoryWeb
+        {
+            Ensure = "Present"  # You can also set Ensure to "Absent"
+            Type = "Directory" # Default is "File".
+            DestinationPath = "c:\web"
+        }
+
+	File DirectoryCatSite
+        {
+            Ensure = "Present"  # You can also set Ensure to "Absent"
+            Type = "Directory" # Default is "File".
+            DestinationPath = "c:\web\CatSite"
+        }
+	File DirectoryCatSiteWWWROOT
+        {
+            Ensure = "Present"  # You can also set Ensure to "Absent"
+            Type = "Directory" # Default is "File".
+            DestinationPath = "c:\web\CatSite\WWWROOT"
+        }
+
+    Log AfterDirectoryCreationWeb
+        {
+            # The message below gets written to the Microsoft-Windows-Desired State Configuration/Analytic log
+            Message = "Finished running the file resource with ID Directoryweb"
+            DependsOn = "[File]Directoryweb" # This means run "DirectoryCopy" first.
+        }
+
+	
+    Log AfterDirectoryCreationCatSite
+        {
+            # The message below gets written to the Microsoft-Windows-Desired State Configuration/Analytic log
+            Message = "Finished running the file resource with ID DirectoryCatSite"
+            DependsOn = "[File]DirectoryCatSite" # This means run "DirectoryCopy" first.
+        }
+
+	Log AfterDirectoryCreationCatSiteWWWROOT
+        {
+            # The message below gets written to the Microsoft-Windows-Desired State Configuration/Analytic log
+            Message = "Finished running the file resource with ID DirectoryCatSiteWWWROOT"
+            DependsOn = "[File]DirectoryCatSiteWWWROOT" # This means run "DirectoryCopy" first.
+        }
+
+    }
+
+
+
+	
+	xWebsite CatSite
 	{
 
             Ensure          = "Present"
-			Name            = 'SiteTest'
+			Name            = 'CatSite'
 			State           = 'Started'
-			PhysicalPath    = 'C:\Web\SiteTest\wwwroot'
+			PhysicalPath    = 'C:\Web\CatSite\wwwroot'
 			ServiceAutoStartEnabled = $true
-			ApplicationPool = 'SiteTestpool'
+			ApplicationPool = 'CatSitePool'
 			BindingInfo     = @(
 				              @(MSFT_xWebBindingInformation   
 
 								{  
 									Protocol              = "HTTP"
-									Port                  =  81
+									Port                  =  80
 									HostName              = "*"
 								}
 							)
@@ -139,7 +186,7 @@ Node $nodeName
 			Digest = $false
 		}
 		
-            DependsOn       = '[xWebAppPool]SiteTestpool'
+            DependsOn       = '[xWebAppPool]CatSitePool'
 
         }        
 

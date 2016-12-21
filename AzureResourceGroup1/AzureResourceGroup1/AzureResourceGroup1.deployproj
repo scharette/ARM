@@ -32,6 +32,24 @@
     <Content Include="WindowsVirtualMachine.json" />
     <Content Include="WindowsVirtualMachine.parameters.json" />
     <Content Include="DSC\VMconfig.ps1" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat1.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat10.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat11.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat12.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat13.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat14.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat15.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat16.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat17.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat2.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat3.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat4.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat5.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat6.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat7.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat8.jpg" />
+    <None Include="Website\CatSite\wwwroot\catPictures\cat9.jpg" />
+    <None Include="Website\CatSite\wwwroot\default.htm" />
   </ItemGroup>
   <Target Name="GetReferenceAssemblyPaths" />
 </Project>
