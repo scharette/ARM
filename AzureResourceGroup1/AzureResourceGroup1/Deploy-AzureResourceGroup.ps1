@@ -7,7 +7,7 @@ Param(
     [string] $ResourceGroupName = 'AzureResourceGroup1',
     [switch] $UploadArtifacts,
     [string] $StorageAccountName,
-    [string] $StorageContainerName = $ResourceGroupName.ToLowerInvariant() + '-stageartifacts',
+    [string] $StorageContainerName,
     [string] $TemplateFile = 'WindowsVirtualMachine.json',
     [string] $TemplateParametersFile = 'WindowsVirtualMachine.parameters.json',
     [string] $ArtifactStagingDirectory = '.',
@@ -29,6 +29,7 @@ function Format-ValidationOutput {
     return @($ValidationOutput | Where-Object { $_ -ne $null } | ForEach-Object { @("  " * $Depth + $_.Code + ": " + $_.Message) + @(Format-ValidationOutput @($_.Details) ($Depth + 1)) })
 }
 
+$StorageContainerName = ($ResourceGroupName.ToLowerInvariant() + '-stageartifacts')
 $OptionalParameters = New-Object -TypeName Hashtable
 $TemplateFile = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, $TemplateFile))
 $TemplateParametersFile = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, $TemplateParametersFile))

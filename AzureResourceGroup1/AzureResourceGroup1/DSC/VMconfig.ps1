@@ -5,12 +5,19 @@ Param ( [string] $nodeName )
 
 Import-DscResource -ModuleName PSDesiredStateConfiguration
 Import-DscResource -ModuleName xWebAdministration
-
+Import-DscResource -ModuleName PowerShellModule
+Import-DSCResource -ModuleName xTimeZone
     
 Node $nodeName
   {
    
-    WindowsFeature WebServerRole
+    
+	xTimeZone TimeZoneExample
+    {
+            IsSingleInstance = 'Yes'
+            TimeZone         = 'Eastern Standard Time'
+    }
+	WindowsFeature WebServerRole
     {
       Name = "Web-Server"
       Ensure = "Present"
@@ -88,7 +95,7 @@ Node $nodeName
         Ensure = "Present"  
         Path  = "C:\WindowsAzure\WebDeploy_amd64_en-US.msi"
         Name = "Microsoft Web Deploy 3.6"
-        ProductId = "{ED4CC1E5-043E-4157-8452-B5E533FE2BA1}"
+        ProductId = "{6773A61D-755B-4F74-95CC-97920E45E696}"
         Arguments = "ADDLOCAL=ALL"
         DependsOn = "[Script]DownloadWebDeploy"
     }
@@ -100,6 +107,14 @@ Node $nodeName
         DependsOn = "[Package]InstallWebDeploy"
     }
 	
+	PSModuleResource AzureStorage
+        {
+		    Ensure      = "Present"
+            Module_Name   = "Azure.Storage"
+        
+        }   
+	
+	
 	xWebAppPool CatSitePool
 
     {
@@ -107,6 +122,17 @@ Node $nodeName
 		Name   = 'CatSitePool'
 		State  = 'Started'
 		autoStart = $true
+		Dependson = "[WindowsFeature]WebServerRole"
+	}
+
+	xWebAppPool DefaultPool
+
+    {
+	    
+		Name   = 'DefaultAppPool'
+		State  = 'Stopped'
+		autoStart = $false
+		Dependson = "[WindowsFeature]WebServerRole"
 	}
 
     File DirectoryWeb
@@ -116,17 +142,20 @@ Node $nodeName
             DestinationPath = "c:\web"
         }
 
-	File DirectoryCatSite
+	File DirCatSite
         {
             Ensure = "Present"  # You can also set Ensure to "Absent"
             Type = "Directory" # Default is "File".
             DestinationPath = "c:\web\CatSite"
+			Dependson = "[File]DirectoryWeb"
         }
-	File DirectoryCatSiteWWWROOT
+	
+	File DirWWWROOT
         {
             Ensure = "Present"  # You can also set Ensure to "Absent"
             Type = "Directory" # Default is "File".
             DestinationPath = "c:\web\CatSite\WWWROOT"
+			Dependson = "[File]DirCatSite"
         }
 
     Log AfterDirectoryCreationWeb
@@ -141,22 +170,77 @@ Node $nodeName
         {
             # The message below gets written to the Microsoft-Windows-Desired State Configuration/Analytic log
             Message = "Finished running the file resource with ID DirectoryCatSite"
-            DependsOn = "[File]DirectoryCatSite" # This means run "DirectoryCopy" first.
+            DependsOn = "[File]DirCatSite" # This means run "DirectoryCopy" first.
         }
 
 	Log AfterDirectoryCreationCatSiteWWWROOT
         {
             # The message below gets written to the Microsoft-Windows-Desired State Configuration/Analytic log
             Message = "Finished running the file resource with ID DirectoryCatSiteWWWROOT"
-            DependsOn = "[File]DirectoryCatSiteWWWROOT" # This means run "DirectoryCopy" first.
+            DependsOn = "[File]DirWWWROOT" # This means run "DirectoryCopy" first.
         }
 
-    }
-
-
-
+    
 	
-	xWebsite CatSite
+	script CopyCatSiteFromAzureStorage
+		    {
+			    GetScript = 
+			    {   
+				    $Context = New-AzureStorageContext -StorageAccountName webteamstorage -Anonymous;
+				    $WebsiteFileCountTMP = (Get-AzureStorageBlob -Context $Context -Container "catsite").count
+				    $WebsiteFileCount = ((Get-ChildItem -Path "c:\web\CatSite\WWWROOT" -recurse).count -1)
+                    return @{ 'Result' = "Count on blob : $WebsiteFileCountTMP, Count on wwwRoot : $WebsiteFileCount " }
+			    }
+
+
+			    SetScript = 
+			    {   
+                    write-verbose -Message "Setting Azure storage context (Anonymous)"
+                    $Context = New-AzureStorageContext -StorageAccountName webteamstorage -Anonymous;
+				    write-verbose -message "Retreiving container content"
+                    Get-AzureStorageBlob -Context $Context -Container "catsite" | Get-AzureStorageBlobContent -Destination "c:\web\CatSite\WWWROOT" -force
+			    }
+			    TestScript =
+			    {   
+				    write-verbose -Message "Counting files in wwwRoot"
+                    $WebsiteFileCount = ((Get-ChildItem -Path "c:\web\CatSite\WWWROOT" -recurse).count -1)
+                    write-verbose -Message "Setting Azure storage context (Anonymous)"
+                    $Context = New-AzureStorageContext -StorageAccountName webteamstorage -Anonymous;
+				    write-verbose -Message "Conting blob in storage container"
+                    $WebsiteFileCountTMP = (Get-AzureStorageBlob -Context $Context -Container "catsite").count
+				    
+                    if($WebsiteFileCountTMP -eq $WebsiteFileCount)
+				
+				    {
+					    write-verbose -Message ('There is nothing to do {0} -eq {1}' -f $WebsiteFileCountTMP, $websiteFileCount)
+					    return $true
+				    }
+				    ELSE
+				    {
+					    write-verbose -Message ('Number of blob does not match, calling setScript {0} -ne {1}' -f $WebsiteFileCountTMP, $websiteFileCount)
+                        return $false
+
+				    }
+				
+			    }
+			 
+			DependsOn = "[File]DirWWWROOT"
+
+		
+		
+		
+		
+		}
+	
+	xWebsite DefaultWebSite
+	{
+
+            Ensure          = "Present"
+			Name            = 'Default Web Site'
+			State           = 'Stopped'
+			ServiceAutoStartEnabled = $false
+	}
+		xWebsite CatSite
 	{
 
             Ensure          = "Present"
@@ -171,7 +255,7 @@ Node $nodeName
 								{  
 									Protocol              = "HTTP"
 									Port                  =  80
-									HostName              = "*"
+									HostName              = ""
 								}
 							)
 						)
@@ -186,10 +270,10 @@ Node $nodeName
 			Digest = $false
 		}
 		
-            DependsOn       = '[xWebAppPool]CatSitePool'
+            DependsOn       = "[xWebAppPool]CatSitePool"
 
         }        
 
-
 	}
+	
 }
